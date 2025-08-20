@@ -1,11 +1,80 @@
-version: "3.9"
+# version: "3.8"
 
 services:
   api:
     build: ./services/api
-    container_name: api-container
+    container_name: api
+    restart: always   # auto-restart on crash
     ports:
       - "3000:3000"
-    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
     labels:
-      autoheal: "true"   # 👈 remediator will use this later
+      - "autoheal=true"   # allow remediator to act on this container
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
+    volumes:
+      - "./monitor/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+      - "./monitor/prometheus/rules.yml:/etc/prometheus/rules.yml:ro"
+    # volumes:
+    #   - ./monitor/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    #   - ./monitor/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
+    ports:
+      - "9090:9090"
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    restart: unless-stopped
+    volumes:
+      - "./monitor/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro"
+    ports:
+      - "9093:9093"
+
+  remediator:
+    build: ./remediator
+    container_name: remediator
+    restart: unless-stopped
+    environment:
+      - ALLOWED_LABEL=autoheal
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8080:8080"
+    depends_on:
+      - alertmanager
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+
+
+
+
+
+
+
+
+# version: "3.9"
+
+# services:
+#   api:
+#     build: ./services/api
+#     container_name: api-container
+#     ports:
+#       - "3000:3000"
+#     restart: always
+#     labels:
+#       autoheal: "true"   # 👈 remediator will use this later
