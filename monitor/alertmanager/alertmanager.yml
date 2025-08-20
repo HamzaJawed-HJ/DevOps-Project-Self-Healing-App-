@@ -1,0 +1,11 @@
+route:
+  receiver: 'remediator'
+  group_by: ['alertname']
+  group_wait: 5s
+  group_interval: 30s
+  repeat_interval: 10m
+
+receivers:
+  - name: 'remediator'
+    webhook_configs:
+      - url: 'http://remediator:8080/alerts'
