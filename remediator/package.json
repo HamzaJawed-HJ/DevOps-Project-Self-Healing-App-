@@ -1,0 +1,10 @@
+{
+  "name": "remediator",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "dockerode": "^4.0.2",
+    "express": "^4.19.2"
+  },
+  "scripts": { "start": "node app.js" }
+}

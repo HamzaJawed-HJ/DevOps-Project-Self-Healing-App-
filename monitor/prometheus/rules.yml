@@ -1,0 +1,19 @@
+groups:
+  - name: api.alerts
+    rules:
+      - alert: TargetDown
+        expr: up{job="api"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "API target down"
+          description: "Prometheus cannot scrape /metrics from api for >1m"
+
+      - alert: ApiHighErrorRate
+        expr: sum(rate(http_requests_total{route="/api/chaos",code="500"}[5m]))
+              / sum(rate(http_requests_total{route="/api/chaos"}[5m])) > 0.2
+        for: 3m
+        labels: { severity: critical }
+        annotations:
+          summary: "API 5xx > 20%"
+          description: "High error rate detected on /api/chaos"
