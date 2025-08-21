@@ -8,4 +8,4 @@ route:
 receivers:
   - name: 'remediator'
     webhook_configs:
-      - url: 'http://remediator:8080/alerts'
+      - url: 'http://remediator:8080/alerts'  # Remediator service in docker compose

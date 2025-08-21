@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Control Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #1f1f1f;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 20px;
+    }
+
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    #kill {
+      background: #e74c3c;
+      color: white;
+    }
+
+    #kill:hover {
+      background: #c0392b;
+    }
+
+    #restart {
+      background: #27ae60;
+      color: white;
+    }
+
+    #restart:hover {
+      background: #1e8449;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>API Control Dashboard</h1>
+  <button id="kill">Kill API</button>
+  <button id="restart">Restart API</button>
+
+  <div id="toast"></div>
+
+  <script>
+    const toast = document.getElementById('toast');
+
+    function showToast(message) {
+      toast.innerText = message;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 3000);
+    }
+
+    async function sendAction(action) {
+      try {
+        const res = await fetch(`http://localhost:8080/${action}`, { method: 'POST' });
+        const data = await res.json();
+        showToast(`${action.toUpperCase()} sent: ${data.ok ? 'Success' : 'Failed'}`);
+      } catch (err) {
+        showToast(`Error: ${err.message}`);
+      }
+    }
+
+    document.getElementById('kill').addEventListener('click', () => sendAction('kill-api'));
+    document.getElementById('restart').addEventListener('click', () => sendAction('restart-api'));
+  </script>
+
+</body>
+
+</html>
