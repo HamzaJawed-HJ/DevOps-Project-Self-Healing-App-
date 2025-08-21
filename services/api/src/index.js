@@ -14,6 +14,11 @@ const errorCounter = new client.Counter({
   help: "Total number of errors",
 });
 
+// Root route
+app.get("/", (req, res) => {
+  res.json({ message: "API is running! Try /api/hello, /metrics, /healthz" });
+});
+
 // Routes
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from API 🚀" });

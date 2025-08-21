@@ -1,15 +1,19 @@
 import express from 'express';
 import Docker from 'dockerode';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import client from 'prom-client'; // <- add Prometheus client
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 const app = express();
 app.use(express.json());
 
+// Path setup for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-app.get('/', (req, res) => {
-  res.send('🚀 Remediator is running');
-});
-
+// Serve dashboard static files
+app.use(express.static(path.join(__dirname, 'dashboard')));
 
 // Map alert names to target containers
 const ACTIONS = {
@@ -17,35 +21,59 @@ const ACTIONS = {
   'ApiHighErrorRate': ['api']
 };
 
+// Label for auto-heal containers
 const ALLOWED_LABEL = process.env.ALLOWED_LABEL || 'autoheal';
 
-// Helper to restart a container by name
+// Prometheus metrics
+client.collectDefaultMetrics({ register: client.register });
+
+// Custom metric: total remediator restarts
+const remediatorRestarts = new client.Counter({
+  name: 'remediator_restarts_total',
+  help: 'Total number of container restarts performed by Remediator'
+});
+
+// Helper: restart container by name
 async function restartByName(name) {
   const containers = await docker.listContainers({ all: true });
   const match = containers.find(c => c.Names.includes('/' + name));
 
   if (!match) {
-    console.log(`container ${name} not found`);
+    console.log(`❌ container ${name} not found`);
     return;
   }
 
-  // Only act if container has the autoheal=true label
   if (!match.Labels || match.Labels[ALLOWED_LABEL] !== 'true') {
-    console.log(`skip ${name}: missing label ${ALLOWED_LABEL}=true`);
+    console.log(`⏭ skip ${name}: missing label ${ALLOWED_LABEL}=true`);
     return;
   }
 
   const container = docker.getContainer(match.Id);
-  console.log(`🔄 Restarting ${name} due to alert...`);
+  console.log(`🔄 Restarting ${name}...`);
   await container.restart();
+
+  // Increment Prometheus counter
+  remediatorRestarts.inc();
 }
 
-// Webhook receiver for Alertmanager
+// Manual restart endpoint (for dashboard)
+app.post('/restart/:container', async (req, res) => {
+  const name = req.params.container;
+  try {
+    await restartByName(name);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ ok: false, error: err.message });
+  }
+});
+
+// Webhook receiver from Alertmanager
 app.post('/alerts', async (req, res) => {
   try {
     const alerts = req.body.alerts || [];
-    for (const a of alerts) {
-      const alertName = a.labels?.alertname;
+    for (const alert of alerts) {
+      const alertName = alert.labels?.alertname;
       const targets = ACTIONS[alertName] || [];
       for (const t of targets) {
         try {
@@ -62,8 +90,9 @@ app.post('/alerts', async (req, res) => {
   }
 });
 
-// Extra: periodic health check (restart unhealthy containers after 3 fails)
+// Health check auto-restart for unhealthy containers
 const unhealthyCounts = new Map();
+
 async function periodicHealthCheck() {
   try {
     const containers = await docker.listContainers({ all: true });
@@ -82,15 +111,31 @@ async function periodicHealthCheck() {
           console.log(`⚠️ Auto-restarting ${name}: unhealthy x${count}`);
           await docker.getContainer(c.Id).restart();
           unhealthyCounts.set(name, 0);
+
+          // Increment Prometheus counter
+          remediatorRestarts.inc();
         }
       } else {
         unhealthyCounts.set(name, 0);
       }
     }
   } catch (err) {
-    console.error('health loop error:', err.message);
+    console.error('Health check loop error:', err.message);
   }
 }
-setInterval(periodicHealthCheck, 20000);
+setInterval(periodicHealthCheck, 20000); // every 20s
 
-app.listen(8080, () => console.log('🚀 Remediator running on port 8080'));
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.send('🚀 Remediator is running');
+});
+
+// Start server
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`🚀 Remediator running on port ${PORT}`));

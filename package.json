@@ -1,0 +1,29 @@
+{
+  "name": "devops-project-self-healing-app-",
+  "version": "1.0.0",
+  "description": "\"# DevOps-Project-Self-Healing-App-\" ;",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HamzaJawed-HJ/DevOps-Project-Self-Healing-App-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/HamzaJawed-HJ/DevOps-Project-Self-Healing-App-/issues"
+  },
+  "homepage": "https://github.com/HamzaJawed-HJ/DevOps-Project-Self-Healing-App-#readme",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "prom-client": "^15.1.3"
+  }
+}

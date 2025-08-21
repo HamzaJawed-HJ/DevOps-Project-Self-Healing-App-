@@ -1,10 +1,10 @@
-# version: "3.8"
+version: "3.9"
 
 services:
   api:
     build: ./services/api
     container_name: api
-    restart: always   # auto-restart on crash
+    restart: always
     ports:
       - "3000:3000"
     healthcheck:
@@ -13,7 +13,7 @@ services:
       timeout: 3s
       retries: 3
     labels:
-      - "autoheal=true"   # allow remediator to act on this container
+      autoheal: "true"
 
   prometheus:
     image: prom/prometheus:latest
@@ -25,9 +25,6 @@ services:
     volumes:
       - "./monitor/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
       - "./monitor/prometheus/rules.yml:/etc/prometheus/rules.yml:ro"
-    # volumes:
-    #   - ./monitor/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    #   - ./monitor/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
     ports:
       - "9090:9090"
 
@@ -46,6 +43,8 @@ services:
     restart: unless-stopped
     environment:
       - ALLOWED_LABEL=autoheal
+      - NODE_ENV=production
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
@@ -53,28 +52,14 @@ services:
     depends_on:
       - alertmanager
 
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    restart: unless-stopped
-    ports:
-      - "3001:3000"
+  grafana:e
+  image: grafana/grafana:latest
+  container_name: grafana
+  restart: unless-stopped
+  ports:
+    - "3001:3000"
+  volumes:
+    - ./grafana/dashboards:/var/lib/grafana/dashboards
+    - ./grafana/provisioning:/etc/grafana/provisioning
 
-
-
-
-
-
-
-
-# version: "3.9"
-
-# services:
-#   api:
-#     build: ./services/api
-#     container_name: api-container
-#     ports:
-#       - "3000:3000"
-#     restart: always
-#     labels:
-#       autoheal: "true"   # 👈 remediator will use this later
+  
